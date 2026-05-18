@@ -1,0 +1,263 @@
+{% from "lib.j2" import format_input %}
+
+# Prompt for Mathlib Translator
+
+Suppose you are an expert mathematician and an expert in Lean and Mathlib.
+
+Your task is to translate a formal **entry** (which may be a theorem, definition, instance, constructor, recursor, inductive-related item, opaque item, or other technical declaration) into:
+
+1. an informal statement that is accessible to mathematicians and written in LaTeX;
+2. an informal name.
+
+The input may include six parts of information:
+
+- Head statements, including important statements, theorems, and definitions of the mathematical field the entry belongs to.
+- The kind of the entry.
+- Docstrings.
+- Neighbor statements that are next to the given statement.
+- Dependent definitions or statements used in the entry.
+- Similar exemplary translations (if provided).
+
+Use this information to understand the formal entry.
+
+## Hard requirement (must follow)
+
+- **Do not refuse the task because the entry is not a theorem.**
+- You must always produce both:
+  - **Informal statement**
+  - **Informal name**
+- If the entry is technical (e.g. constructor/recursor/opaque/internal helper), provide a conservative and faithful structural explanation based on the given signature, name, and context; do not fabricate mathematical claims that are not supported by the input.
+
+## Principles of Informal Statements
+
+1. The informal statement should be written using human-used mathematical notations and formulas in LaTeX as much as possible, and explain the meaning of the symbols therein. Explain more detailed mathemathtical setup only if the definition appeared in the statement is not commonly accepted. Both of conditions and conclusions should be expressed using mathematical formulas as much as possible.
+  Example:
+  DO NOT use "`Real.log`";
+  Use "$\log$" instead.
+
+2. DO NOT add any additional information that does not appear in the formal statement. The only exception is the explaination of an unfamiliar definition in the statement.
+  Example:
+  DO NOT translate `cos Real.pi = -1` as "$\cos \pi = -1$. This follows from ...". the whole part "This follows from ..." should be deleted since it does not appear in the statement.
+  Leave only the part "$\cos \pi = -1$".
+
+3. Ensure that the translated statement maintains mathematical rigor, has the same mathematical meaning with the formal one. The informal statement should be as concise and easy to understand as possible while maintaining rigor.
+  Example:
+  DO NOT confuse the translation of `A →+* B` and `A → B`.
+  They should be translated into "the ring map from $A$ to $B$" and "the map from $A$ to $B$", respectively.
+
+4. Prefer to state propositions in the natural order of human language, rather than the order in the formal statement.
+  Example:
+  DO NOT translate `A → B → C` as "A implies B implies C".
+  It should be translated as "A and B implies C".
+
+5. Convert the mathematical symbols and other expressions used in the formal statement into symbols and expressions that conform to human usage.
+  Example:
+  Avoid using a, b, c as a function's name
+  Use f, g, h for a function's name instead.
+
+6. Rephrase the words in the statement in the customary and natural way of mathematicians.
+  Example:
+  DO NOT use "sets of sets".
+  Use "family of sets" instead.
+
+7. If a concept appearing in the formal statement is not in accordance with the customary usage of mathematicians, and it is explained in the annotations, use this explanation to replace the concept in the informal statement.
+
+8. Words that are not in natural language such as `Set.OrdConnected` should be explained with the help of naming conventions below and the dependencies, instead of directly used.
+
+9. DO NOT miss any important assumptions before the statement. If you are not sure about the importance, write out all of them when you create the informal statement.
+
+10. DO NOT capital the initials of mathematical terms inside a sentence unless it is a person's name.
+
+11. DO NOT mention anything about universe or `Sort` in the statement or notation unless this is a statement ad hoc for universe lifting and is not a mathematical statement. DO NOT use universe-polymorphic notation `.{u1,u2}` in the notation.
+
+12. DO NOT use "coe" or "coercion", using the help of dependency and docstring, write out the concrete coercion function explicitly.
+
+13. For technical entries (constructor/recursor/opaque/internal helper), if there is no conventional mathematical sentence, describe the role of the entry conservatively (e.g., constructor of a structure, recursion/elimination helper, internal auxiliary definition) while remaining faithful to the formal signature.
+
+## Principles of Informal Names
+
+1. Emphasize the core concepts in the statement. The definition name should not merely list concepts; use words that indicate logical relationships and clearly state the conclusion.
+
+2. Be as concise as possible on this basis. Use mathematical formulas in the informal name if possible.
+
+3. If this statement has a commonly accepted conventional name, please use this conventional name directly.
+
+4. The domain of the statement should be clarified in the informal name unless it is conventional not to do so.
+
+5. If the statement is a variant of a well-known statement, show the connection in the informal name. Specific versions of a statement should be named explicitly, in order to distinguish it with other versions.
+
+6. For an equality or a inequality, use the LaTeX form of it directly in the informal name.
+
+7. DO NOT use "coe" or "coercion".
+
+8. For technical entries, the informal name should explicitly indicate technical role when helpful (e.g., "constructor for ...", "recursor for ...", "auxiliary definition for ...").
+
+In order to better understand a formal statement in Lean4, you should keep in mind the following naming conventions that mathlib takes. Both the names at the beginning of theorems/definitions and names that appear in the statements follows the naming conventions.
+
+## General Conventions:
+
+There are three naming cases used in lean4, `snake_case`, `UpperCamelCase`  and `lowerCamelCase`.
+
+1. `snake_case` is used for proofs and theorem names.
+2. `UpperCamelCase` is used for inductive types, structures and classes.
+3. Functions are named in the same way as their returned values.
+4. Other terms are in `lowerCamelCase`.
+5. When something named with `UpperCamelCase` is part of something named with `snake_case`, it is referenced in `lowerCamelCase`.
+6. Acronyms like `LE` are written upper-/lowercase as a group, depending on what the first character would be.
+7. Rules 1-6 apply to fields of a structure or constructors of an inductive type in the same way.
+
+Rare exceptions including:  `Ne` rather than `NE` for not equal, intervals (`Set.Ico` for left closed right open interval, `Set.Iic` for left infinite right closed interval, etc.).
+
+### Name of symbols
+
+The following dictionary helps you understand the connection between names and symbols.
+
+#### Logic
+
+| Name                    | Symbol | Meaning              | Notes                                                               |
+| ----------------------- | ------ | -------------------- | ------------------------------------------------------------------- |
+| or                      | ∨     | or                   |                                                                     |
+| and                     | ∧     | and                  |                                                                     |
+| of / imp                | →     | implication          | the conclusion is stated first and the hypotheses are often omitted |
+| iff                     | ↔     | if and only if       | sometimes omitted along with the right hand side of the iff         |
+| not                     | ¬     | not                  |                                                                     |
+| exists / bex            | ∃     | there exists         | bex stands for "bounded exists"                                   |
+| all / forall / ball     | ∀     | for all              | ball stands for "bounded forall"                                  |
+| eq                      | =      | equal                | often omitted in formal theorem names                               |
+| ne                      | ≠     | not equal            |                                                                     |
+| comp                    | ∘     | function composition |                                                                     |
+
+#### Set
+
+| name               | symbol | meaning                     | notes                                                 |
+| ------------------ | ------ | --------------------------- | ----------------------------------------------------- |
+| mem                | ∈     | belongs to                  |                                                       |
+| union              | ∪     | union                       |                                                       |
+| inter              | ∩     | intersection                |                                                       |
+| iUnion / biUnion   | ⋃     | union among a family        | i for "indexed", bi for "bounded indexed"         |
+| iInter / biInter   | ⋂     | intersection among a family | i for "indexed", bi for "bounded indexed"         |
+| sUnion             | ⋃₀   | union in a set              | s for "set"                                         |
+| sInter             | ⋂₀   | intersection in a set       | s for "set"                                         |
+| sdiff              | \      | difference set              |                                                       |
+| compl              | ᶜ     | complement set              |                                                       |
+| setOf              | {x     | p x}                        | subset consisting of elements$x$ satisfying $p x$ |
+| singleton          | {x}    | set of one element          |                                                       |
+| pair               | {x, y} | set of two elements         |                                                       |
+
+#### Algebra
+
+| Name        | Symbol | Meaning                  | Notes                                                      |
+| ----------- | ------ | ------------------------ | ---------------------------------------------------------- |
+| zero        | 0      | zero                     |                                                            |
+| add         | +      | add                      |                                                            |
+| neg / sub   | -      | negative or substraction | neg for the unary function, sub for the binary function    |
+| one         | 1      | one                      |                                                            |
+| mul         | *      | multiplication           |                                                            |
+| pow         | ^      | power                    |                                                            |
+| div         | /      | divided by               |                                                            |
+| smul        | •     | scalar multiplication    |                                                            |
+| inv         | ⁻¹   | inverse                  | an inversion operation defined on the whole type           |
+| invOf       | ⅟     | inverse                  | ⅟ is for the case when no general ⁻¹ operator             |
+| dvd         | ∣     | divides                  |                                                            |
+| sum         | ∑     | summation                | summation over a finite set or a finite type               |
+| prod        | ∏     | product                  | product over a finite set or a finite type                 |
+
+#### Lattice
+
+| Name                     | Symbol | Meaning                | Notes                                                                         |
+| ------------------------ | ------ | ---------------------- | ----------------------------------------------------------------------------- |
+| lt                       | <      | less than              |                                                                               |
+| le                       | ≤     | less than or equal to  |                                                                               |
+| sup                      | ⊔     | binary supremum        | a binary operator                                                             |
+| inf                      | ⊓     | binary infimum         | a binary operator                                                             |
+| iSup / biSup / ciSup     | ⨆     | supremum over a family | i for "indexed", bi for "bounded indexed", c for "conditionally complete" |
+| iInf / biInf / ciInf     | ⨅     | infimum over a family  | i for "indexed", bi for "bounded indexed", c for "conditionally complete" |
+| bot                      | ⊥     | the bottom element     |                                                                               |
+| top                      | ⊤     | the top element        |                                                                               |
+
+#### Dots
+
+Dots are used for namespaces, and also for automatically generated names like recursors, eliminators and structure projections. They can also be introduced manually, for example, where projector notation is useful.
+
+Dot notation is often used in the statements: If `n : Nat` is an integer, then `n.succ` is an abbreviation for `Nat.succ n`. If the type of `e` is `A`, `e.B` is an abbreviation for `A.B e` where `e` is filled at the first argument of `A.B` of type `A`.
+
+#### Axiomatic descriptions
+
+Some theorems are described using axiomatic names, rather than describing their conclusions. Here is some examples of axiomatic description in theorem names.
+
+| name             | meaning                                                                                                              |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| def              | unfolding a definition                                                                                               |
+| refl             | reflexivity of a relation $r$, means $r a a$ holds for every $a$                                                    |
+| irrefl           | irreflexivity of a relation $r$, means not $r a a$ holds for every $a$                                              |
+| symm             | symmetry of a relation $r$, meaning $r a b$ implies $r b a$                                                         |
+| trans            | transitivity of a relation $r$, meaning $r a b$ and $r b c$ implies $r a c$                                        |
+| antisymm         | antisymmetry of a relation $r$, meaning $r a b$ and $r b a$ implies $a = b$                                        |
+| asymm            | asymmetry of a relation $r$, meaning $r a b$ implies not $r b a$                                                    |
+| congr            | congruence of a function $f$, meaning $f(x_1, \cdots, x_n) = f(y_1, \cdots, y_n)$ if $x_i = y_i$ for each $i$ |
+| comm             | commutativity of a binary function $f$, meaning $f(x, y) = f(y, x)$                                                 |
+| assoc            | associativity of a binary operation $f$, meaning $f(f(x, y), z) = f(x, f(y, z))$                                   |
+| left_comm        | left-commutativity of a binary function $f$, meaning $f(x, f(y, z)) = f(y, f(x, z))$                               |
+| right_comm       | right-commutativity of a binary function $f$, meaning $f(f(x, y), z) = f(f(x, z), y)$                              |
+| mul_left_cancel  | left-cancellation property of multiplication, meaning $a * b = a * c$ implies $b = c$                              |
+| mul_right_cancel | right-cancellation property of multiplication, meaning $b * a = c * a$ implies $b = c$                             |
+| inj              | injectivity of a function                                                                                            |
+| intro/mk         | introduction function of a type, creating a term of this type.                                                       |
+
+### Identifiers and theorem names
+
+Common "axiomatic" properties of an operation like conjunction or disjunction are put in a namespace that begins with the name of the operation: `And.comm`, `Or.elim`, `Eq.trans`.
+
+Note however we do not do this for axiomatic logical and arithmetic operations: `and_assoc`, `mul_left_cancel`.
+
+For the most part, however, we rely on descriptive names. Often the name of theorem simply describes the conclusion: `succ_ne_zero`, `mul_one`, `le_iff_lt_or_eq`.
+
+If only a prefix of the description is enough to convey the meaning, the name may be made even shorter: `neg_neg`, `Nat.pred_succ`.
+
+When an operation is written as infix, the theorem names follow suit. For example, we write `neg_mul_neg` rather than `mul_neg_neg` to describe the pattern `-a * -b`.
+
+Sometimes, to disambiguate the name of theorem or better convey the intended reference, it is necessary to describe some of the hypotheses. The word "of" is used to separate these hypotheses: `lt_of_not_ge`, `add_lt_add_of_lt_of_le`.
+
+The hypotheses are listed in the order they appear, not reverse order. For example, the theorem `A → B → C` would be named `C_of_A_of_B`.
+
+Sometimes abbreviations or alternative descriptions are easier to work with. For example, we use `pos`, `neg`, `nonpos`, `nonneg` rather than `zero_lt`, `lt_zero`, `le_zero`, and `zero_le`.
+
+Sometimes the word "left" or "right" is helpful to describe variants of a theorem: `add_le_add_left`, `add_le_add_right`.
+
+Sometimes, to disambiguate variants of a theorem, the name of the variants is differed from the original theorem name by a suffix. For example, suffix `'`, `''` often means a minor difference in the premises or conclusion: `neg_add'` is very similar to `neg_add`. Suffix `₂` means a variant with two arguments: `congrArg₂`. Suffix `₀` means a variant of the theorem in a “with zero” setting: `mul_inv_cancel_left₀`.
+
+### Naming of Structural Lemmas/Definitions
+
+Currently, these are not uniform across Mathlib.
+
+#### Extensionality
+
+A lemma of the form `(∀ x, f x = g x) → f = g` should be named `.ext`. A lemma of the form `f = g ↔ ∀ x, f x = g x` should be named `.ext_iff`.
+
+#### Injectivity
+
+Where possible, injectivity lemmas are written in terms of a `Function.Injective f` conclusion, using the full word `injective`, typically as `f_injective`. The form `injective_f` still appears frequently in Mathlib.
+
+In addition, a variant should usually be provided as a bidirectional implication, e.g., `f x = f y ↔ x = y`, which can be obtained from `Function.Injective.eq_iff`. Such lemmas are named `f_inj`.
+
+#### Coercion
+
+Sometimes we use the prefixes `to` and `of` in the names of functions to indicate their target or source types. For example, `Int.ofNat` is a function from `Nat` to `Int`, and `Real.Angle.toReal` is a function from `Real.Angle` to `Real`.
+
+---
+
+### Output format
+
+Strictly output exactly two sections:
+
+**Informal statement**
+[Your informal statement]
+
+**Informal name**
+[Your informal name]
+
+Do not add extra sections.
+
+### Now, your input is:
+
+{{ format_input(input) }}

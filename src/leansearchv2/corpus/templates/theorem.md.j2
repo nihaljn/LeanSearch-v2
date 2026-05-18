@@ -1,0 +1,472 @@
+{% from "lib.j2" import format_input %}
+
+# Prompt for Mathlib Translator
+
+Suppose you are an expert mathematician and an expert in Lean and Mathlib.
+
+1. Your task is to first translate the formal theorem provided below into an informal statement that is more accessible to mathematicians and written in LaTeX. There are five parts of information attached to the instance.
+
+   * Head statements, including important statements, theorems, and definitions of the mathematical field the theorem belongs to.
+   * Docstrings. In most cases, the docstrings contain the informal explanation of the formal statement, written by humans. In this case, you should make good use of the docstrings and include all mathematical information in the docstrings in your translation of the statement. Sometimes the docstring also contains implementation notes, which should not appear in your translation.
+   * Neighbor statements that are next to the given statement.
+   * Dependent definitions or statements used in the definition.
+   * Similar exemplary translations. These are written by humans and are of high quality. You should learn from their usage of information and follow their style of informalization.
+
+   Utilize this information to better understand the formal definition. Make sure you follow the principles of informal statements when translating the formal definition into an informal statement.
+   
+2. Then create an informal name. Use the provided formal name of the statement according to the naming conventions. Utilize the informal statement written in the first task. Make sure you follow the principles of informal naming when creating informal names. Principles of informal statements should also be followed as much as possible.
+
+## Principles of Informal Statements
+
+1. The informal statement should be written using human-used mathematical notations and formulas in LaTeX as much as possible, and explain the meaning of the symbols therein. Explain more detailed mathemathtical setup only if the definition appeared in the statement is not commonly accepted. Both of conditions and conclusions should be expressed using mathematical formulas as much as possible.
+  Example:
+  DO NOT use "`Real.log`";
+  Use "$\log$" instead.
+
+2. DO NOT add any additional information that does not appear in the formal statement. The only exception is the explaination of an unfamiliar definition in the statement.
+  Example:
+  DO NOT translate `cos Real.pi = -1` as "$\cos \pi = -1$. This follows from ...". the whole part "This follows from ..." should be deleted since it does not appear in the statement.
+  Leave only the part "$\cos \pi = -1$".
+
+3. Ensure that the translated theorem maintains mathematical rigor, has the same mathematical meaning with the formal one. The informal statement should be as concise and easy to understand as possible while maintaining rigor.
+  Example:
+  DO NOT confuse the translation of `A →+* B` and `A → B`.
+  They should be translated into "the ring map from $A$ to $B$" and "the map from $A$ to $B$", respectively.
+
+4. Prefer to state propositions in the natural order of human language, rather than the order in the formal statement.
+  Example:
+  DO NOT translate `A → B → C` as "A implies B implies C".
+  It should be translated as "A and B implies C".
+
+5. Convert the mathematical symbols and other expressions used in the formal statement into symbols and expressions that conform to human usage.
+  Example:
+  Avoid using a, b, c as a function's name
+  Use f, g, h for a function's name instead.
+
+6. Rephrase the words in the theorem in the customary and natural way of mathematicians.
+  Example:
+  DO NOT use "sets of sets".
+  Use "family of sets" instead.
+
+7. If a concept appearing in the formal statement is not in accordance with the customary usage of mathematicians, and it is explained in the annotations, use this explanation to replace the concept in the informal statement.
+  Example:
+  DO NOT translate `Nat.log2 (n : Nat) : Nat` as "the `Nat.log2` is a function from natural numbers to natural numbers".
+  Using the help of docstring, translate it as "The base 2 logarithm function on natural number $n$ computes $\lfloor \max 0, (\log_2 n) \rfloor$."
+
+8. Words that are not in natural language such as `Set.OrdConnected` should be explained with the help of naming conventions below and the dependencies, instead of directly used.
+  Example:
+  DO NOT use `Set.OrdConnected` directly.
+  It should be translated as "order connected" with further explaination "a set $S$ in type $A$ is called order connected if for any $x, y \in A$, the closed interval consisting all elements between $x$ and $y$ is contained in $S$."
+
+9. DO NOT miss any important assumptions before the statement. If you are not sure about the importance, write out all of them when you create the informal statement.
+  Example:
+  DO NOT miss `LinearOrderedCommGroupWithZero α` or `a ≠ 0` in `theorem one_le_inv₀ {α : Type u_1} [LinearOrderedCommGroupWithZero α] {a : α} (ha : a ≠ 0) : 1 ≤ a⁻¹ ↔ a ≤ 1`.
+  It should be translated as "For any nonzero element $a$ in a linear ordered commutative group with zero, ..."
+
+10. DO NOT capital the initials of mathematical terms inside a sentence unless it is a person's name.
+  Example:
+  DO NOT write "Given a Measure Space ..."
+  It should be changed into "Given a measure space ...".
+
+11. DO NOT mention anything about universe or `Sort` in the statement or notation unless this is a statement ad hoc for universe lifting and is not a mathematical statement. DO NOT use universe-polymorphic notation `.{u1,u2}` in the notation.
+  Example:
+  DO NOT write `List.{u}` in your translation.
+  Use English word "list" instead.
+
+12. DO NOT use "coe" or "coercion", using the help of dependency and docstring, write out the concrete coercion function explicitly.
+  Example:
+  DO NOT translate `theorem PNat.coe_inj {m : ℕ+} {n : ℕ+} : ↑m = ↑n ↔ m = n` as "The coercion on positive natural number is injective."
+  It should be translated as "The canonical map from positive natural number to natrual number is injective."
+
+## Principles of Informal Names
+
+1. Emphasize the core concepts in the theorem. The definition name should not merely list concepts; use words that indicate logical relationships and clearly state the conclusion.
+  Example:
+  Use "A equals to B" or "A implies B" (or simply "$A = B$" and "$A \to B$"), instead of "theorem of A and B" when the theorem states the result of `A = B` or `A → B`.
+
+2. Be as concise as possible on this basis. Use mathematical formulas in the informal name if possible.
+  Example:
+  "$\pi > 3$" is concise name for `theorem Real.pi_gt_three`.
+
+3. If this theorem has a commonly accepted conventional name, please use this conventional name directly.
+  Example:
+  `theorem Classical.em (p : Prop) : p ∨ ¬p` has a conventional name as "Law of the Excluded Middle".
+
+4. The domain of the statement should be clarified in the informal name unless it is conventional not to do so.
+  Example:
+  `theorem Complex.sin_neg` should be translated into "... the complex sine function ..." instead of "... the sine function ...", to distinguish from another version using the sine function defined on the reals.
+
+5. If the theorem is a variant of a well-known theorem, show the connection in the informal name. Specific versions of a theorem should be named explicitly, in order to distinguish it with other versions.
+  Example:
+  `theorem intervalIntegral.integral_hasStrictDerivAt_left` should be translated as "Fundamental theorem of calculus, strict differentiability in the left endpoint" in order to distinguish it with the right version and the both side version.
+
+6. For an equality or a inequality, use the LaTeX form of it directly in the informal name.
+  Example:
+  "$\pi > 3$" is good name for `theorem Real.pi_gt_three`.
+
+7. DO NOT use "coe" or "coercion".
+  Example:
+  Although `coe` appears in the `theorem NNRat.coe_nonneg`, DO NOT use "coercion". Translate it as "the canonical function ..."
+
+In order to better understand a formal theorem in Lean4, you should keep in mind the following naming conventions that mathlib takes. Both the names at the beginning of theorems/definitions and names that appear in the statements follows the naming conventions.
+
+## General Conventions:
+
+There are three naming cases used in lean4, `snake_case`, `UpperCamelCase`  and `lowerCamelCase`.
+
+1. `snake_case` is used for proofs and theorem names.
+2. `UpperCamelCase` is used for inductive types, structures and classes.
+3. Functions are named in the same way as their returned values.
+4. Other terms are in `lowerCamelCase`.
+5. When something named with `UpperCamelCase` is part of something named with `snake_case`, it is referenced in `lowerCamelCase`.
+6. Acronyms like `LE` are written upper-/lowercase as a group, depending on what the first character would be.
+7. Rules 1-6 apply to fields of a structure or constructors of an inductive type in the same way.
+
+Rare exceptions including:  `Ne` rather than `NE` for not equal, intervals (`Set.Ico` for left closed right open interval, `Set.Iic` for left infinite right closed interval, etc.).
+
+### Name of symbols
+
+The following dictionary helps you understand the connection between names and symbols.
+
+#### Logic
+
+| Name                    | Symbol | Meaning              | Notes                                                               |
+| ----------------------- | ------ | -------------------- | ------------------------------------------------------------------- |
+| or                      | ∨     | or                   |                                                                     |
+| and                     | ∧     | and                  |                                                                     |
+| of / imp              | →     | implication          | the conclusion is stated first and the hypotheses are often omitted |
+| iff                     | ↔     | if and only if       | sometimes omitted along with the right hand side of the iff         |
+| not                     | ¬     | not                  |                                                                     |
+| exists / bex          | ∃     | there exists         | bex stands for "bounded exists"                                    |
+| all / forall / ball | ∀     | for all              | ball stands for "bounded forall"                                   |
+| eq                      | =      | equal                | often omitted in formal theorem names                               |
+| ne                      | ≠     | not equal            |                                                                     |
+| comp                    | ∘     | function composition |                                                                     |
+
+#### Set
+
+| name               | symbol | meaning                     | notes                                                 |
+| ------------------ | ------ | --------------------------- | ----------------------------------------------------- |
+| mem                | ∈     | belongs to                  |                                                       |
+| union              | ∪     | union                       |                                                       |
+| inter              | ∩     | intersection                |                                                       |
+| iUnion / biUnion | ⋃     | union among a family        | i for "indexed", bi for "bounded indexed"          |
+| iInter / biInter | ⋂     | intersection among a family | i for "indexed", bi for "bounded indexed"          |
+| sUnion             | ⋃₀   | union in a set              | s for "set"                                          |
+| sInter             | ⋂₀   | intersection in a set       | s for "set"                                          |
+| sdiff              | \      | difference set              |                                                       |
+| compl              | ᶜ     | complement set              |                                                       |
+| setOf              | {x     | p x}                        | subset consisting of elements$x$ satisfying $p x$ |
+| singleton          | {x}    | set of one element          |                                                       |
+| pair               | {x, y} | set of two elements         |                                                       |
+
+#### Algebra
+
+| Name        | Symbol | Meaning                  | Notes                                                      |
+| ----------- | ------ | ------------------------ | ---------------------------------------------------------- |
+| zero        | 0      | zero                     |                                                            |
+| add         | +      | add                      |                                                            |
+| neg / sub | -      | negative or substraction | neg for the unary function, sub for the binary function |
+| one         | 1      | one                      |                                                            |
+| mul         | *      | multiplication           |                                                            |
+| pow         | ^      | power                    |                                                            |
+| div         | /      | divided by               |                                                            |
+| smul        | •     | scalar multiplication    |                                                            |
+| inv         | ⁻¹   | inverse                  | an inversion operation defined on the whole type           |
+| invOf       | ⅟     | inverse                  | ⅟ is for the case when no general ⁻¹ operator           |
+| dvd         | ∣     | divides                  |                                                            |
+| sum         | ∑     | summation                | summation over a finite set or a finite type               |
+| prod        | ∏     | product                  | product over a finite set or a finite type                 |
+
+#### Lattice
+
+| Name                     | Symbol | Meaning                | Notes                                                                         |
+| ------------------------ | ------ | ---------------------- | ----------------------------------------------------------------------------- |
+| lt                       | <      | less than              |                                                                               |
+| le                       | ≤     | less than or equal to  |                                                                               |
+| sup                      | ⊔     | binary supremum        | a binary operator                                                             |
+| inf                      | ⊓     | binary infimum         | a binary operator                                                             |
+| iSup / biSup / ciSup | ⨆     | supremum over a family | i for "indexed", bi for "bounded indexed", c for "conditionally complete" |
+| iInf / biInf / ciInf | ⨅     | infimum over a family  | i for "indexed", bi for "bounded indexed", c for "conditionally complete" |
+| bot                      | ⊥     | the bottom element     |                                                                               |
+| top                      | ⊤     | the top element        |                                                                               |
+
+#### Dots
+
+Dots are used for namespaces, and also for automatically generated names like recursors, eliminators and structure projections. They can also be introduced manually, for example, where projector notation is useful.
+
+Dot notation is often used in the statements: If `n : Nat` is an integer, then `n.succ` is an abbreviation for `Nat.succ n`. If the type of `e` is `A`, `e.B` is an abbreviation for `A.B e` where `e` is filled at the first argument of `A.B` of type `A`.
+
+#### Axiomatic descriptions
+
+Some theorems are described using axiomatic names, rather than describing their conclusions. Here is some examples of axiomatic description in theorem names.
+
+| name             | meaning                                                                                                              |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| def              | unfolding a definition                                                                                               |
+| refl             | reflexivity of a relation $r$, means $r a a$ holds for every $a$                                                |
+| irrefl           | irreflexivity of a relation $r$, means not $r a a$ holds for every $a$                                          |
+| symm             | symmetry of a relation $r$, meaning $r a b$ implies $r b a$                                                     |
+| trans            | transitivity of a relation $r$, meaning $r a b$ and $r b c$ implies $r a c$                                   |
+| antisymm         | antisymmetry of a relation $r$, meaning $r a b$ and $r b a$ implies $a = b$                                   |
+| asymm            | asymmetry of a relation $r$, meaning $r a b$ implies not $r b a$                                                |
+| congr            | congruence of a function $f$, meaning $f(x_1, \cdots, x_n) = f(y_1, \cdots, y_n)$ if $x_i = y_i$ for each $i$ |
+| comm             | commutativity of a binary function $f$, meaning $f(x, y) = f(y, x)$                                               |
+| assoc            | associativity of a binary operation $f$, meaning $f(f(x, y), z) = f(x, f(y, z))$                                  |
+| left_comm        | left-commutativity of a binary function $f$, meaning $f(x, f(y, z)) = f(y, f(x, z))$                              |
+| right_comm       | right-commutativity of a binary function $f$, meaning $f(f(x, y), z) = f(f(x, z), y)$                             |
+| mul_left_cancel  | left-cancellation property of multiplication, meaning $a * b = a * c$ implies $b = c$                             |
+| mul_right_cancel | right-cancellation property of multiplication, meaning $b * a = c * a$ implies $b = c$                            |
+| inj              | injectivity of a function                                                                                            |
+| intro/mk         | introduction function of a type, creating a term of this type.                                                       |
+
+### Identifiers and theorem names
+
+Common "axiomatic" properties of an operation like conjunction or disjunction are put in a namespace that begins with the name of the operation: `And.comm`, `Or.elim`, `Eq.trans`.
+
+Note however we do not do this for axiomatic logical and arithmetic operations: `and_assoc`, `mul_left_cancel`.
+
+For the most part, however, we rely on descriptive names. Often the name of theorem simply describes the conclusion: `succ_ne_zero`, `mul_one`, `le_iff_lt_or_eq`.
+
+If only a prefix of the description is enough to convey the meaning, the name may be made even shorter: `neg_neg`, `Nat.pred_succ`.
+
+When an operation is written as infix, the theorem names follow suit. For example, we write `neg_mul_neg` rather than `mul_neg_neg` to describe the patter `-a * -b`.
+
+Sometimes, to disambiguate the name of theorem or better convey the intended reference, it is necessary to describe some of the hypotheses. The word "of" is used to separate these hypotheses: `lt_of_not_ge`, `add_lt_add_of_lt_of_le`.
+
+The hypotheses are listed in the order they appear, *not* reverse order. For example, the theorem `A → B → C` would be named `C_of_A_of_B`.
+
+Sometimes abbreviations or alternative descriptions are easier to work with. For example, we use `pos`, `neg`, `nonpos`, `nonneg` rather than `zero_lt`, `lt_zero`, `le_zero`, and `zero_le`.
+
+Sometimes the word "left" or "right" is helpful to describe variants of a theorem: `add_le_add_left`, `add_le_add_right`.
+
+Sometimes, to disambiguate variants of a theorem, the name of the variants is differed from the original theorem name by a suffix. For example, suffix `'`, `''` often means a minor difference in the premises or conclusion : `neg_add'` is very similar to `neg_add` . Suffix `₂` means a variant with two arguments: `congrArg₂`. Suffix `₀` means a variant of the theorem in a “with zero” setting: `mul_inv_cancel_left₀`.
+
+### Naming of Structural Lemmas/Definitions
+
+Currently, these are not uniform across Mathlib.
+
+#### Extensionality
+
+A lemma of the form `(∀ x, f x = g x) → f = g` should be named `.ext`. A lemma of the form `f = g ↔ ∀ x, f x = g x` should be named `.ext_iff`.
+
+#### Injectivity
+
+Where possible, injectivity lemmas are written in terms of a `Function.Injective f` conclusion, using the full word `injective`, typically as `f_injective`. The form `injective_f` still appears frequently in Mathlib.
+
+In addition, a variant should usually be provided as a bidirectional implication, e.g., `f x = f y ↔ x = y`, which can be obtained from `Function.Injective.eq_iff`. Such lemmas are named `f_inj`.
+
+#### Coercion
+
+Sometimes we use the prefixes `to` and `of` in the names of functions to indicate their target or source types. For example, `Int.ofNat` is a function from `Nat` to `Int`, and `Real.Angle.toReal` is a function from `Real.Angle` to `Real`.
+
+**Warning: The following example is only used to demonstrate the format, their exact meaning is irrelevant.**
+
+### Input 1:
+**Head statements:**
+# Helper "packing" theorems
+
+**Kind:**
+theorem
+**Docstring:**
+
+**Dependent statements:**
+1.
+Formal name: LT.lt
+Formal statement: {α : Type u} → [self : LT α] → α → α → Prop
+Informal name: Less Than Relation
+Informal statement: The `LT.lt` function defines the 'less than' relation `<` for a given type `α` when the `LT α` typeclass is provided. It takes two arguments of type `α` and returns a proposition stating that the first argument is less than the second one.
+2.
+Formal name: Nat
+Formal statement: Type
+Informal name: Natural Numbers
+Informal statement: The natural numbers are an inductive type, denoted as `Nat`, which is freely generated by two constructors: `zero`, representing the number 0, and `succ`, which represents the successor operation. This type is fundamental in Lean and is used for arithmetic and recursion. Theorems about natural numbers can be proven using induction, which involves proving the base case for `zero` and the inductive step for `succ`. The type `Nat` is optimized for efficiency, with small numbers represented directly and larger numbers using an arbitrary precision library.
+3.
+Formal name: instLTNat
+Formal statement: LT Nat
+Informal name: Less Than Relation Instance for Natural Numbers
+Informal statement: For the natural numbers type `Nat`, there exists an instance of the `LT` typeclass, which provides a 'less than' relation `<` for elements of `Nat`. This relation is defined such that `n < m` holds if and only if the successor of `n` is less than or equal to `m`, i.e., `n + 1 ≤ m`.
+4.
+Formal name: instAddNat
+Formal statement: Add Nat
+Informal name: Addition Instance for Natural Numbers
+Informal statement: For the natural numbers `Nat`, an instance of the `Add` structure is provided, which defines the addition operation for natural numbers. This instance allows the use of the `+` operator for adding natural numbers together, following the recursive definition where adding zero to any number results in the number itself, and adding the successor of a number results in the successor of the sum of the original numbers.
+5.
+Formal name: instHAdd
+Formal statement: {α : Type u_1} → [inst : Add α] → HAdd α α α
+Informal name: Heterogeneous Addition Instance for Additive Type
+Informal statement: For any type \( alpha \) in universe level \( u_1 \) with an instance of the `Add` structure, there exists an instance of the `HAdd` structure for \( alpha \) that allows for heterogeneous addition operations between elements of \( alpha \) itself.
+6.
+Formal name: HAdd.hAdd
+Formal statement: {α : Type u} → {β : Type v} → {γ : outParam (Type w)} → [self : HAdd α β γ] → α → β → γ
+Informal name: Heterogeneous Addition Operation
+Informal statement: The function `hAdd` is the primary operation of the `HAdd` structure, which defines a heterogeneous addition. Given types `α`, `β`, and `γ` from the Lean universe hierarchy, `hAdd` takes an element `a : α` and an element `b : β`, and returns an element `a + b : γ`. This operation allows for the addition of elements from different types, extending the concept of addition beyond homogeneous types.
+**Neighbor statements:**
+1.
+Formal name: Nat.add_lt_add_left
+Formal statement: ∀ {n m : Nat}, n < m → ∀ (k : Nat), k + n < k + m
+Informal name: Addition Preserves 'Less Than' Relation in Natural Numbers
+Informal statement: For any natural numbers $n$ and $m$, if $n$ is strictly less than $m$, then for any natural number $k$, the sum of $k$ and $n$ is strictly less than the sum of $k$ and $m$. This theorem demonstrates the preservation of the 'less than' relation when adding a constant $k$ to both sides of the inequality in the natural numbers.
+2.
+Formal name: Nat.zero_lt_one
+Formal statement: 0 < 1
+Informal name: Zero is Less Than One in Natural Numbers
+Informal statement: In the natural numbers, zero is strictly less than one.
+**Similar translation examples:**
+1.
+Formal name: Nat.lt
+Formal statement: Nat → Nat → Prop
+Informal name: Strict Less-Than Relation on Natural Numbers
+Informal statement: The strict less than relation on natural numbers is defined as `n < m := n + 1 ≤ m`.
+2.
+Formal name: Nat.dvd_add_self_right
+Formal statement: ∀ {m n : ℕ}, m ∣ n + m ↔ m ∣ n
+Informal name: Divisibility of Sum by Another Number in Natural Numbers
+Informal statement: A natural number `m` divides the sum `n + m` if and only if `m` divides `n`.
+3.
+Formal name: PartENat.coe_lt_coe
+Formal statement: ∀ {x y : ℕ}, ↑x < ↑y ↔ x < y
+Informal name: Preservation of 'Less Than' Relation in Casting Natural Numbers to Extended Natural Numbers
+Informal statement: Alias of `Nat.cast_lt` specialized to `PartENat` -
+
+**Formal name:**
+Nat.add_lt_add_right
+**Formal statement:**
+∀ {n m : Nat}, n < m → ∀ (k : Nat), n + k < m + k
+
+### Output 1:
+**Informal statement**
+For any natural numbers $n$ and $m$ such that $n < m$, and for any natural number $k$, it holds that $n + k < m + k$.
+**Informal name**
+Right Addition Preserves Strict Inequality in Natural Numbers
+
+### Input 2:
+**Head statements:**
+# Trigonometric functions
+
+## Main definitions
+
+This file contains the definition of `π`.
+
+See also `Analysis.SpecialFunctions.Trigonometric.Inverse` and
+`Analysis.SpecialFunctions.Trigonometric.Arctan` for the inverse trigonometric functions.
+
+See also `Analysis.SpecialFunctions.Complex.Arg` and
+`Analysis.SpecialFunctions.Complex.Log` for the complex argument function
+and the complex logarithm.
+
+## Main statements
+
+Many basic inequalities on the real trigonometric functions are established.
+
+The continuity of the usual trigonometric functions is proved.
+
+Several facts about the real trigonometric functions have the proofs deferred to
+`Analysis.SpecialFunctions.Trigonometric.Complex`,
+as they are most easily proved by appealing to the corresponding fact for
+complex trigonometric functions.
+
+See also `Analysis.SpecialFunctions.Trigonometric.Chebyshev` for the multiple angle formulas
+in terms of Chebyshev polynomials.
+
+## Tags
+
+sin, cos, tan, angle
+
+**Kind:**
+theorem
+**Docstring:**
+
+**Dependent statements:**
+1.
+Formal name: Real.cos
+Formal statement: ℝ → ℝ:=
+  (cos x).re
+Informal name: Real Cosine Function via Complex Cosine
+Informal statement: The real cosine function, denoted as $\cos(x)$, is defined for every real number $x$ in the real field $\mathbb{R}$ as the real part of the complex cosine function evaluated at the complex number constructed from $x$ by the function `Complex.ofReal'`. In other words, $\cos(x) = \text{Re}(\cos(x + 0i))$.
+2.
+Formal name: OfNat.ofNat
+Formal statement: {α : Type u} → (x : Nat) → [self : OfNat α x] → α
+Informal name: Natural Number to Type Element Construction
+Informal statement: The function `OfNat.ofNat` takes a type `α` and a natural number `x` as arguments. It requires an instance of `OfNat α x` to exist, and then it maps this natural number to an element of the type `α`. This function is used to construct an element of a type from a natural number, given that the type has an instance of `OfNat` for that natural number.
+3.
+Formal name: Real.instOneReal
+Formal statement: One ℝ
+Informal name: Multiplicative Identity Instance for Real Numbers
+Informal statement: For the type of real numbers `ℝ`, there exists a `One` instance, which is the equivalence class of Cauchy sequences of rational numbers that converge to the multiplicative identity element, denoted as `1`. This instance provides the existence of a multiplicative identity in the real numbers, a fundamental property for the real number system.
+4.
+Formal name: Real
+Formal statement: Type
+Informal name: Real Numbers as Cauchy Sequences
+Informal statement: The structure `Real` represents the type of real numbers, constructed as equivalence classes of Cauchy sequences of rational numbers. This approach is chosen due to the ease of proving that the real numbers form a commutative ring by lifting operations to the rational numbers. The properties of being an Archimedean floor ring and a conditionally complete linear order are not included in this structure but are addressed in the file `Mathlib/Data/Real/Archimedean.lean` to simplify the imports.
+5.
+Formal name: One.toOfNat1
+Formal statement: {α : Type u_1} → [inst : One α] → OfNat α 1
+Informal name: Association of Multiplicative Identity with Type via OfNat
+Informal statement: Given a type \( alpha \) with a multiplicative identity structure (`One α`), the instance `One.toOfNat1` associates the multiplicative identity element, denoted as `1`, with the type \( alpha \) using the `OfNat` structure. This means that for any type \( alpha \) that has a multiplicative identity, there is an automatic association between the natural number `1` and the type \( alpha \), allowing for the interpretation of the numeric literal `1` as the multiplicative identity within \( alpha \).
+6.
+Formal name: Neg.neg
+Formal statement: {α : Type u} → [self : Neg α] → α → α
+Informal name: Unary Negation Operation
+Informal statement: The `Neg.neg` function is a method of the `Neg` typeclass that applies the unary negation operation to an element of type `α`. Given an instance `self` of `Neg α` for some type `α`, `Neg.neg self a` returns the negation of `a : α`, denoted as `-a : α`.
+7.
+Formal name: Real.pi
+Formal statement: ℝ:=
+  2 * Classical.choose exists_cos_eq_zero
+Informal name: Definition of Pi via Cosine Zero
+Informal statement: The real number $\pi$ is defined as twice the real number chosen by the `Classical.choose` function from the existence proof of a real number in the closed interval [1, 2] such that its cosine is zero. This definition is based on the property that $\pi$ is the smallest positive real number for which $\cos(\pi) = 0$. The `Classical.choose` function is a choice function that selects an element from a non-empty set, in this case, a real number whose cosine is zero within the specified interval.
+71.
+Formal name: Real.instNegReal
+Formal statement: Neg ℝ
+Informal name: Negation Instance for Real Numbers
+Informal statement: For the type of real numbers `ℝ`, there exists a negation operation such that for any real number `a : ℝ`, there is a corresponding real number `-a : ℝ` that satisfies the additive inverse property within the additive group structure of `ℝ`.
+8.
+Formal name: Eq
+Formal statement: {α : Sort u_1} → α → α → Prop
+Informal name: Equality relation
+Informal statement: The equality relation, denoted as `a = b`, is an equivalence relation on a type `α`. It is defined inductively with a single constructor, `Eq.refl`, which asserts that `a = a` for any `a : α`. The relation is reflexive, symmetric, and transitive, and it allows for substitution of equals for equals, as demonstrated by the `Eq.subst` function.
+**Neighbor statements:**
+1.
+Formal name: Real.sin_pi
+Formal statement: Real.sin Real.pi = 0
+Informal name: Sine of Pi Equals Zero
+Informal statement: The sine of the real number $\pi$, denoted as $\sin(\pi)$, is equal to 0. This is a fundamental result in trigonometry that arises from the periodicity of the sine function and the definition of $\pi$ as the smallest positive real number for which $\cos(\pi) = 0$, which implies that $\sin(\pi) = 0$ due to the half-angle relationship between sine and cosine.
+2.
+Formal name: Real.sin_two_pi
+Formal statement: Real.sin (2 * Real.pi) = 0
+Informal name: Sine of Twice Pi Equals Zero
+Informal statement: For any real number, the sine of twice the value of $\pi$, denoted as $\sin(2\pi)$, is equal to 0. This property is a direct consequence of the periodicity of the sine function, which repeats its values every $2\pi$ radians.
+
+**Similar translation examples:**
+1.
+Formal name: Real.cos_pi_div_three
+Formal statement: (Real.pi / 3).cos = 1 / 2
+Informal name: Cosine of Pi Over Three Equals One Half
+Informal statement: The cosine of `π / 3` is `1 / 2`.
+2.
+Formal name: Real.pi
+Formal statement: ℝ
+Informal name: Definition of Pi via Cosine Zero
+Informal statement: The number π = 3.14159265... Defined here using choice as twice a zero of cos in [1,2], from which one can derive all its properties. For explicit bounds on π, see `Data.Real.Pi.Bounds`.
+3.
+Formal name: EuclideanGeometry.cos_eq_neg_one_iff_angle_eq_pi
+Formal statement: ∀ {V : Type u_1} {P : Type u_2} [inst : NormedAddCommGroup V] [inst_1 : InnerProductSpace ℝ V] [inst_2 : MetricSpace P]
+  [inst_3 : NormedAddTorsor V P] {p₁ p₂ p₃ : P},
+  (EuclideanGeometry.angle p₁ p₂ p₃).cos = -1 ↔ EuclideanGeometry.angle p₁ p₂ p₃ = π
+Informal name: Cosine of Angle between Points in Euclidean Geometry Equals Negative One if and only if Angle is Pi
+Informal statement: The cosine of the angle between three points is -1 if and only if the angle is π.
+
+**Formal name:**
+Real.cos_pi
+**Formal statement:**
+Real.cos Real.pi = -1
+
+### Output 2:
+**Informal statement**
+The cosine function evaluated at $x = \pi$ is equal to $-1$, i.e., $\cos(\pi) = -1$.
+**Informal name**
+Cosine Identity: $\cos(\pi) = -1$
+
+### Now, your input is:
+
+{{ format_input(input) }}

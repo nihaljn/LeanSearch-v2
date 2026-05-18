@@ -1,0 +1,30 @@
+# Reproducibility pin matching the environment used to produce the paper.
+# `pip install -e .` reads `pyproject.toml` (looser bounds); this file pins
+# specific versions known to work end-to-end. Pick one path:
+#
+#   pip install -r requirements.txt --extra-index-url https://pypi.nvidia.com
+#
+# The cuVS / cupy wheels live on the RAPIDS index; lean-interact is only
+# needed by the prove task.
+
+# Core retriever (CPU client + GPU pipeline)
+fastapi==0.128.0
+uvicorn==0.40.0
+pydantic==2.12.5
+python-dotenv==1.2.1
+pyyaml==6.0.3
+numpy==1.26.4
+torch==2.6.0
+sentence-transformers==5.2.2
+transformers==4.57.6
+httpx==0.28.1
+openai==2.16.0
+tqdm==4.67.2
+jinja2==3.1.4
+
+# GPU vector backend (RAPIDS; needs --extra-index-url https://pypi.nvidia.com)
+cuvs-cu12==25.12.0
+cupy-cuda12x==13.6.0
+
+# Prove task only (also needs elan/lake on PATH)
+lean-interact>=0.5

@@ -1,0 +1,102 @@
+# LeanSearch v2 — local configuration.
+#
+# Every key below can be overridden by an environment variable of the same
+# name (uppercased; see src/leansearchv2/config.py).
+# Relative paths are resolved against the repository root.
+#
+# To override values locally without editing this file, create
+# `config.local.yaml` (gitignored). Keys in config.local.yaml win over
+# config.yaml; environment variables win over both.
+
+paths:
+  # cuVS index directory. Contains metadata.pkl, texts.pkl, cuvs_index.bin.
+  # Download a pre-built copy from HuggingFace or build your own.
+  cuvs_db: data/cuvs/mathlib-v4.28.0-rc1
+
+  # Working directory for the corpus build pipeline (jixia raw + merged JSONL).
+  corpus_workdir: data/corpus
+
+  # Local Mathlib4 checkout (with `lake exe cache get` already run).
+  # Used only by scripts/build_corpus.sh. Default: external/Mathlib4.
+  mathlib4: external/Mathlib4
+
+  # Path to the built jixia binary. Default: external/jixia/.lake/build/bin/jixia.
+  jixia_bin: external/jixia/.lake/build/bin/jixia
+
+models:
+  embedder: Qwen/Qwen3-Embedding-8B
+  reranker: Qwen/Qwen3-Reranker-8B
+
+serve:
+  num_gpus: null              # null = use every visible GPU
+  gpu_memory_utilization: 0.9
+
+# Retriever endpoint consumed by reasoning mode and the prove task.
+# Default points at a locally-running `scripts/serve.sh`.
+# Set to `https://leansearch.net` to use the public deployment instead
+# (note: the public service uses a 4B reranker, so results will deviate
+# from the paper's Table 1 which used the 8B reranker).
+retriever:
+  url: http://localhost:8000
+  timeout_s: 60
+
+# OpenAI-compatible LLM profiles. Each entry under `llm.<name>` defines a
+# named profile; consumers select one by name via `reasoning.*_llm` /
+# `prove.*_llm` below. Per-profile fields:
+#   base_url      - OpenAI-compatible chat completions endpoint
+#   api_key       - inline key (avoid for committed configs; use api_key_env)
+#   api_key_env   - env var name to read the key from (preferred)
+#   model         - vendor model id
+#   timeout_s     - request timeout (default 120)
+#   max_retries   - SDK-level retries (default 3)
+#   temperature, top_p, max_tokens   - optional sampling defaults
+llm:
+  openai:
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    model: gpt-4o-mini
+
+  # Paper setting: Claude Sonnet 4.5 for sketch / judge / revision and the
+  # prove task's prover. Reach it via a vendor-compatible endpoint of your
+  # choice (Anthropic, Vertex, or an aggregator that speaks the OpenAI API).
+  # sonnet:
+  #   base_url: https://api.your-vendor.example/v1
+  #   api_key_env: SONNET_API_KEY
+  #   model: claude-sonnet-4-5-20250929
+  #   max_tokens: 32768
+
+  # Paper setting: Kimi K2 Instruct for the reasoning-mode document filter.
+  # kimi:
+  #   base_url: https://api.your-vendor.example/v1
+  #   api_key_env: KIMI_API_KEY
+  #   model: moonshotai/Kimi-K2-Instruct
+
+# Reasoning mode (task-2) hyperparameters. Paper defaults shown.
+reasoning:
+  search_top_k: 30            # candidates per sub-query from standard mode
+  output_top_k: 100           # final entry list cap returned to caller
+  big_loop: 3                 # max PreJudge re-plan iterations
+  parallelism: 4
+  # Per-role LLM profile (must match a key under `llm.*`). Paper used
+  # `sonnet` for sketch/judge and `kimi` for filter; override in
+  # config.local.yaml once those profiles are defined.
+  sketch_llm: openai
+  filter_llm: openai
+  judge_llm: openai
+
+# Prove task (task-3) hyperparameters. Paper defaults shown.
+prove:
+  reflection_rounds: 8
+  parallelism: 8
+  prover_max_retries: 3
+  verifier_max_retries: 3
+  retriever_mode: standard    # standard | reasoning
+  # Per-role LLM profile. Paper used `sonnet` for both the prover and the
+  # reflect-time query generator.
+  prover_llm: openai
+  query_llm: openai
+
+# Corpus informalizer (corpus build step 1c). The paper used Qwen3-32B
+# with a Gemini 2.5 Pro fallback; only the primary call is wired here.
+informalize:
+  llm: openai

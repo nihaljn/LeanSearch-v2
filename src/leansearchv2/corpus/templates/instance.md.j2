@@ -1,0 +1,402 @@
+{% from "lib.j2" import format_input %}
+
+# Prompt for Mathlib Translator
+
+Suppose you are an expert mathematician and an expert in Lean and Mathlib.
+
+1. Your task is to first translate the formal instance provided below into an informal statement that is more accessible to mathematicians and written in LaTeX. There are five parts of information attached to the instance.
+
+   * Head statements, including important statements, theorems, and definitions of the mathematical field the theorem belongs to.
+   * Docstrings. In most cases, the docstrings contain the informal explanation of the formal statement, written by humans. In this case, you should make good use of the docstrings and include all mathematical information in the docstrings in your translation of the statement. Sometimes the docstring also contains implementation notes, which should not appear in your translation.
+   * Neighbor statements that are next to the given statement.
+   * Dependent definitions or statements used in the definition.
+   * Similar exemplary translations. These are written by humans and are of high quality. You should learn from their usage of information and follow their style of informalization.
+
+   Utilize this information to better understand the formal definition. Make sure you follow the principles of informal statements when translating the formal definition into an informal statement.
+   
+2. Then create an informal name. Use the provided formal name of the statement according to the naming conventions. Utilize the informal statement written in the first task. Make sure you follow the principles of informal naming when creating informal names. Principles of informal statements should also be followed as much as possible.
+
+## Ideas behind instances
+
+The main idea behind instances and typeclasses is to make arguments such as `Add α` implicit, and to use a database of user-defined instances to synthesize the desired instances automatically through a process known as typeclass resolution. Instances can be used to overload notation sych as `Mul α`, or store the canonical structures on a given type such as `Ring R`.
+If that were the extent of type class inference, it would not be all that impressive; it would be simply a mechanism of storing a list of instances for the elaborator to find in a lookup table. What makes type class inference powerful is that one can chain instances. That is, an instance declaration can in turn depend on an implicit instance of a type class. This causes class inference to chain through instances recursively, backtracking when necessary, in a Prolog-like search.
+
+## Principles of Informal Statementss
+
+1. The informal statement should be written using human-used mathematical notations and formulas in LaTeX as much as possible, explaining the meaning of the symbols therein. Explain more detailed mathematical setup only if the definition appearing in the statement is not commonly accepted. Both the inputs and values of the definition should be expressed using mathematical formulas as much as possible.
+   Example:
+   DO NOT use "`Real.log`";
+   Use "$\log$" instead.
+
+2. DO NOT add any additional information that does not appear in the formal statement. The only exception is the explaination of an unfamiliar definition in the statement.
+   Example:
+   DO NOT translate `cos Real.pi = -1` as "$\cos \pi = -1$. This follows from ...". the whole part "This follows from ..." should be deleted since it does not appear in the statement.
+   Leave only the part "$\cos \pi = -1$".
+
+3. Ensure that the translated definition maintains mathematical rigor, has the same mathematical meaning with the formal one. The informal statement should be as concise and easy to understand as possible while maintaining rigor.
+   Example:
+   DO NOT confuse the translation of `A →+* B` and `A → B`.
+   They should be translated into "the ring map from $A$ to $B$" and "the map from $A$ to $B$", respectively.
+
+4. Prefer to state the result in the natural order of human language, rather than the order in the formal statement.
+   Example:
+   DO NOT translate `A → B → C` as "A implies B implies C".
+   It should be translated as "A and B implies C".
+
+5. Instances always state a result of the form `SomeClass SomeType`. Using the help of docstrings and mathematical knowledge, you should try to include as much information of the specific mathematical definition as possible instead of merely state the class name without explaination.
+   Example:
+   DO NOT translate `instance List.instMembership {α : Type u} : Membership α (List α)` merely as "There exists a membership relation $ \in $ between any type $ \alpha $ and list of $ \alpha $."
+   Translated it as "For any $ a $ in type $ \alpha $ we say $ a \in l $ for some list $ l $ if $ a $ appears in $ l $."
+   Only in the case that there is only a obviously canoical way to construct the instance, such as forgetful inheritance, you can state it directly without further explaination. DO NOT use "There exists ...". Either this instance is obviously canonical you shoud should state it as "Every ... is ..." or it needs concrete explaination.
+   Example:
+   DO NOT translate `instance Group.toDivisionMonoid {G : Type u_1}  [Group G] : DivisionMonoid G` as "There exists a division monoid structure on every group".
+   Translate it as "Every group is a division monoid."
+
+6. Sometimes the instance should be translated as a theorem when it has mathemathical meaning as a theorem.
+   Example:
+   The statement of `instance littleWedderburn (D : Type u_1)  [DivisionRing D]  [Finite D] : Field D` should be translated into "Every finite division ring is a field."
+
+7. When the instance is filling in fields of a class, DO NOT translate those fields that are proofs.
+   Example:
+   When you are translating `instance ... : OrderBot Nat := { bot := 0, bot_le := ...}`, the field `bot_le` is a proof and thus should be ignored.
+   Only the field `bot` that contains data should be translated explicitly as "The natural number has a bottom element 0 with respect to the order on it."
+
+8. When the instance is filling in fields of a class, DO NOT explain the definition of this class in detail.
+   Example:
+   DO NOT explain the definition of a division ring or a field when you are translating `instance littleWedderburn (D : Type u_1)  [DivisionRing D]  [Finite D] : Field D`
+   The statement should be translated into simply "Every finite division ring is a field."
+
+9. Convert the mathematical symbols and other expressions used in the formal statement into symbols and expressions that conform to human usage.
+   Example:
+   Avoid using a, b, c as a function's name
+   Use f, g, h for a function's name instead.
+
+10. Rephrase the words in the statement in the customary and natural way of mathematicians.
+    Example:
+    DO NOT use "sets of sets".
+    Use "family of sets" instead.
+
+11. If a concept appearing in the formal statement is not in accordance with the customary usage of mathematicians, and it is explained in the annotations, use this explanation to replace the concept in the informal statement.
+
+12. Words that are not in natural language such as `OrdConnect` should be explained with the help of naming conventions below, instead of directly used. If you do not know how to explain them, it is acceptable to use them directly.
+    Example:
+    DO NOT translate `Nat.log2 (n : Nat) : Nat` as "the `Nat.log2` is a function from natural numbers to natural numbers".
+    Using the help of docstring, translate it as "The base 2 logarithm function on natural number $n$ computes $\lfloor \max 0, (\log_2 n) \rfloor$."
+
+13. DO NOT miss any important assumptions. If you are not sure about the importance, write out all of them when you create the informal statement.
+    Example:
+    DO NOT miss `LinearOrderedCommGroupWithZero α` or `a ≠ 0` in `theorem one_le_inv₀ {α : Type u_1} [LinearOrderedCommGroupWithZero α] {a : α} (ha : a ≠ 0) : 1 ≤ a⁻¹ ↔ a ≤ 1`.
+    It should be translated as "For any nonzero element $a$ in a linear ordered commutative group with zero, ..."
+
+14. DO NOT capital the initials of mathematical terms inside a sentence unless it is a person's name.Example:
+    DO NOT write "Given a Measure Space ..."
+    It should be changed into "Given a measure space ...".
+
+15. DO NOT mention anything about universe or `Sort` in the statement or notation unless this is a statement ad hoc for universe lifting and is not a mathematical statement.
+    Example:
+    DO NOT write `List.{u}` in your translation.
+    Use English word "list" instead.
+
+16. DO NOT use "coe" or "coercion", using the help of dependency and docstring, write out the concrete coercion function explicitly.
+    Example:
+    DO NOT translate `theorem PNat.coe_inj {m : ℕ+} {n : ℕ+} : ↑m = ↑n ↔ m = n` as "The coercion on positive natural number is injective."
+    It should be translated as "The canonical map from positive natural number to natrual number is injective."
+
+## Principles of Informal Names
+
+1. Emphasize the core concepts in the theorem. The definition name should not merely list concepts; use words that indicate logical relationships and clearly state the conclusion.
+   Example:
+   Use "A equals to B" or "A implies B" (or simply "$A = B$" and "$A \to B$"), instead of "theorem of A and B" when the theorem states the result of `A = B` or `A → B`.
+
+2. Be as concise as possible on this basis. Use LaTeX mathematical formulas in the informal name if possible.
+   Example:
+   "$\pi > 3$" is concise name for `theorem Real.pi_gt_three`.
+
+3. If this statement has a commonly accepted conventional name, please use this conventional name to name the statement.
+   Example:
+   `instance littleWedderburn (D : Type u_1)  [DivisionRing D]  [Finite D] : Field D` has a conventional name as "Wedderburn's Little theorem".
+
+4. The domain of the statement should be clarified in the informal name.
+   Example:
+   `theorem Complex.sin_neg` should be translated into "... the complex sine function ..." instead of "... the sine function ...", to distinguish from another version using the sine function defined on the reals.
+
+5. If the statement is a variant of a well-known statement, show the connection in the informal name.
+   Example:
+   `class NNNorm` is a variant of `class Norm`, requiring the value of the norm fall in poisitive reals. It should be translated as "non-negative norms" if `class Norm` is translated as "norms".
+
+6. DO NOT use "coe" or "coercion".
+   Example:
+   Although `coe` appears in the `instance RingHom.coeToMonoidHom`, DO NOT use "coercion" in its translation.
+   Tranlate it as "the canonical function ..." or "the canonical way of ...".
+
+In order to better understand a formal instance in Lean4, you should keep in mind the following naming conventions that mathlib takes. Both the names at the beginning of theorems/definitions/instances and names that appear in the statements follows the naming conventions.
+
+## General Conventions:
+
+There are three naming cases used in lean4, `snake_case`, `UpperCamelCase`  and `lowerCamelCase`.
+
+1. `snake_case` is used for proofs and theorem names.
+2. `UpperCamelCase` is used for inductive types, structures and classes.
+3. Functions are named in the same way as their returned values.
+4. Other terms are in `lowerCamelCase`.
+5. When something named with `UpperCamelCase` is part of something named with `snake_case`, it is referenced in `lowerCamelCase`.
+6. Acronyms like `LE` are written upper-/lowercase as a group, depending on what the first character would be.
+7. Rules 1-6 apply to fields of a structure or constructors of an inductive type in the same way.
+
+Rare exceptions including:  `Ne` rather than `NE` for not equal, intervals (`Set.Ico` for left closed right open interval, `Set.Iic` for left infinite right closed interval, etc.).
+
+### Name of symbols
+
+The following dictionary helps you understand the connection between names and symbols.
+
+#### Logic
+
+| Name                    | Symbol | Meaning              | Notes                                                               |
+| ----------------------- | ------ | -------------------- | ------------------------------------------------------------------- |
+| or                      | ∨     | or                   |                                                                     |
+| and                     | ∧     | and                  |                                                                     |
+| of / imp              | →     | implication          | the conclusion is stated first and the hypotheses are often omitted |
+| iff                     | ↔     | if and only if       | sometimes omitted along with the right hand side of the iff         |
+| not                     | ¬     | not                  |                                                                     |
+| exists / bex          | ∃     | there exists         | bex stands for "bounded exists"                                    |
+| all / forall / ball | ∀     | for all              | ball stands for "bounded forall"                                   |
+| eq                      | =      | equal                | often omitted in formal theorem names                               |
+| ne                      | ≠     | not equal            |                                                                     |
+| comp                    | ∘     | function composition |                                                                     |
+
+#### Set
+
+| name               | symbol | meaning                     | notes                                                 |
+| ------------------ | ------ | --------------------------- | ----------------------------------------------------- |
+| mem                | ∈     | belongs to                  |                                                       |
+| union              | ∪     | union                       |                                                       |
+| inter              | ∩     | intersection                |                                                       |
+| iUnion / biUnion | ⋃     | union among a family        | i for "indexed", bi for "bounded indexed"          |
+| iInter / biInter | ⋂     | intersection among a family | i for "indexed", bi for "bounded indexed"          |
+| sUnion             | ⋃₀   | union in a set              | s for "set"                                          |
+| sInter             | ⋂₀   | intersection in a set       | s for "set"                                          |
+| sdiff              | \      | difference set              |                                                       |
+| compl              | ᶜ     | complement set              |                                                       |
+| setOf              | {x     | p x}                        | subset consisting of elements$x$ satisfying $p x$ |
+| singleton          | {x}    | set of one element          |                                                       |
+| pair               | {x, y} | set of two elements         |                                                       |
+
+#### Algebra
+
+| Name        | Symbol | Meaning                  | Notes                                                      |
+| ----------- | ------ | ------------------------ | ---------------------------------------------------------- |
+| zero        | 0      | zero                     |                                                            |
+| add         | +      | add                      |                                                            |
+| neg / sub | -      | negative or substraction | neg for the unary function, sub for the binary function |
+| one         | 1      | one                      |                                                            |
+| mul         | *      | multiplication           |                                                            |
+| pow         | ^      | power                    |                                                            |
+| div         | /      | divided by               |                                                            |
+| smul        | •     | scalar multiplication    |                                                            |
+| inv         | ⁻¹   | inverse                  | an inversion operation defined on the whole type           |
+| invOf       | ⅟     | inverse                  | ⅟ is for the case when no general ⁻¹ operator           |
+| dvd         | ∣     | divides                  |                                                            |
+| sum         | ∑     | summation                | summation over a finite set or a finite type               |
+| prod        | ∏     | product                  | product over a finite set or a finite type                 |
+
+#### Lattice
+
+| Name                     | Symbol | Meaning                | Notes                                                                         |
+| ------------------------ | ------ | ---------------------- | ----------------------------------------------------------------------------- |
+| lt                       | <      | less than              |                                                                               |
+| le                       | ≤     | less than or equal to  |                                                                               |
+| sup                      | ⊔     | binary supremum        | a binary operator                                                             |
+| inf                      | ⊓     | binary infimum         | a binary operator                                                             |
+| iSup / biSup / ciSup | ⨆     | supremum over a family | i for "indexed", bi for "bounded indexed", c for "conditionally complete" |
+| iInf / biInf / ciInf | ⨅     | infimum over a family  | i for "indexed", bi for "bounded indexed", c for "conditionally complete" |
+| bot                      | ⊥     | the bottom element     |                                                                               |
+| top                      | ⊤     | the top element        |                                                                               |
+
+#### Dots
+
+Dots are used for namespaces, and also for automatically generated names like recursors, eliminators and structure projections. They can also be introduced manually, for example, where projector notation is useful.
+
+Dot notation is often used in the statements: If `n : Nat` is an integer, then `n.succ` is an abbreviation for `Nat.succ n`. If the type of `e` is `A`, `e.B` is an abbreviation for `A.B e` where `e` is filled at the first argument of `A.B` of type `A`.
+
+#### Axiomatic descriptions
+
+Some theorems are described using axiomatic names, rather than describing their conclusions. Here is some examples of axiomatic description in theorem names.
+
+| name             | meaning                                                                                                              |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| def              | unfolding a definition                                                                                               |
+| refl             | reflexivity of a relation$r$, means $r a a$ holds for every $a$                                                |
+| irrefl           | irreflexivity of a relation$r$, means not $r a a$ holds for every $a$                                          |
+| symm             | symmetry of a relation$r$, meaning $r a b$ implies $r b a$                                                     |
+| trans            | transitivity of a relation$r$, meaning $r a b$ and $r b c$ implies $r a c$                                   |
+| antisymm         | antisymmetry of a relation$r$, meaning $r a b$ and $r b a$ implies $a = b$                                   |
+| asymm            | asymmetry of a relation$r$, meaning $r a b$ implies not $r b a$                                                |
+| congr            | congruence of a function$f$, meaning $f(x_1, \cdots, x_n) = f(y_1, \cdots, y_n)$ if $x_i = y_i$ for each $i$ |
+| comm             | commutativity of a binary function$f$, meaning $f(x, y) = f(y, x)$                                               |
+| assoc            | associativity of a binary operation$f$, meaning $f(f(x, y), z) = f(x, f(y, z))$                                  |
+| left_comm        | left-commutativity of a binary function$f$, meaning $f(x, f(y, z)) = f(y, f(x, z))$                              |
+| right_comm       | right-commutativity of a binary function$f$, meaning $f(f(x, y), z) = f(f(x, z), y)$                             |
+| mul_left_cancel  | left-cancellation property of multiplication, meaning$a * b = a * c$ implies $b = c$                             |
+| mul_right_cancel | right-cancellation property of multiplication, meaning$b * a = c * a$ implies $b = c$                            |
+| inj              | injectivity of a function                                                                                            |
+| intro/mk         | introduction function of a type, creating a term of this type.                                                       |
+
+### Identifiers and theorem names
+
+Common "axiomatic" properties of an operation like conjunction or disjunction are put in a namespace that begins with the name of the operation: `And.comm`, `Or.elim`, `Eq.trans`.
+
+Note however we do not do this for axiomatic logical and arithmetic operations: `and_assoc`, `mul_left_cancel`.
+
+For the most part, however, we rely on descriptive names. Often the name of theorem simply describes the conclusion: `succ_ne_zero`, `mul_one`, `le_iff_lt_or_eq`.
+
+If only a prefix of the description is enough to convey the meaning, the name may be made even shorter: `neg_neg`, `Nat.pred_succ`.
+
+When an operation is written as infix, the theorem names follow suit. For example, we write `neg_mul_neg` rather than `mul_neg_neg` to describe the patter `-a * -b`.
+
+Sometimes, to disambiguate the name of theorem or better convey the intended reference, it is necessary to describe some of the hypotheses. The word "of" is used to separate these hypotheses: `lt_of_not_ge`, `add_lt_add_of_lt_of_le`.
+
+The hypotheses are listed in the order they appear, *not* reverse order. For example, the theorem `A → B → C` would be named `C_of_A_of_B`.
+
+Sometimes abbreviations or alternative descriptions are easier to work with. For example, we use `pos`, `neg`, `nonpos`, `nonneg` rather than `zero_lt`, `lt_zero`, `le_zero`, and `zero_le`.
+
+Sometimes the word "left" or "right" is helpful to describe variants of a theorem: `add_le_add_left`, `add_le_add_right`.
+
+Sometimes, to disambiguate variants of a theorem, the name of the variants is differed from the original theorem name by a suffix. For example, suffix `'`, `''` often means a minor difference in the premises or conclusion : `neg_add'` is very similar to `neg_add` . Suffix `₂` means a variant with two arguments: `congrArg₂`. Suffix `₀` means a variant of the theorem in a “with zero” setting: `mul_inv_cancel_left₀`.
+
+### Naming of Structural Lemmas/Definitions
+
+Currently, these are not uniform across Mathlib.
+
+#### Extensionality
+
+A lemma of the form `(∀ x, f x = g x) → f = g` should be named `.ext`. A lemma of the form `f = g ↔ ∀ x, f x = g x` should be named `.ext_iff`.
+
+#### Injectivity
+
+Where possible, injectivity lemmas are written in terms of a `Function.Injective f` conclusion, using the full word `injective`, typically as `f_injective`. The form `injective_f` still appears frequently in Mathlib.
+
+In addition, a variant should usually be provided as a bidirectional implication, e.g., `f x = f y ↔ x = y`, which can be obtained from `Function.Injective.eq_iff`. Such lemmas are named `f_inj`.
+
+#### Coercion
+
+Sometimes we use the prefixes `to` and `of` in the names of functions to indicate their target or source types. For example, `Int.ofNat` is a function from `Nat` to `Int`, and `Real.Angle.toReal` is a function from `Real.Angle` to `Real`.
+
+**Warning: The following example is only used to demonstrate the format, their exact meaning is irrelevant.**
+
+**Head statements:**
+
+# Lemmas about division (semi)rings and (semi)fields
+
+**Kind:**
+instance
+**Docstring:**
+
+**Dependent statements:**
+1.
+Formal name: DivisionSemiring.toSemiring
+Formal statement: {α : Type u_4} → [self : DivisionSemiring α] → Semiring α
+Informal name: Semiring Structure Inheritance from Division Semiring
+Informal statement: For any type \( \alpha \) that is a division semiring, there exists a corresponding semiring structure on \( \alpha \). This instance asserts that a division semiring, which is a semiring with multiplicative inverses for nonzero elements, inherently possesses all the properties of a semiring, including operations for addition and multiplication, and elements 0 and 1 with their respective identities.
+2.
+Formal name: IsDomain
+Formal statement: (α : Type u) → [inst : Semiring α] → Prop
+Informal name: Domain property
+Informal statement: A domain is a nontrivial semiring with the property that multiplication by a non-zero element is cancellative on both sides. In other words, for a semiring α, it satisfies the following conditions: ∀ {a b c : α}, a ≠ 0 → a * b = a * c → b = c and ∀ {a b c : α}, b ≠ 0 → a * b = c * b → a = c.
+3.
+Formal name: Field.toSemifield
+Formal statement: {K : Type u_3} → [inst : Field K] → Semifield K
+Informal name: Field Implies Commutative Division Semiring
+Informal statement: For any type \( K \) that is a field, \( K \) is also a commutative division semiring. This instance asserts that a field, which is a commutative ring with multiplicative inverses for all non-zero elements, inherits the properties of a semifield, including the existence of a multiplicative identity, and the operation of multiplication by the inverse of a non-zero element.
+4.
+Formal name: Semifield.toDivisionSemiring
+Formal statement: {α : Type u_4} → [self : Semifield α] → DivisionSemiring α
+Informal name: Commutative Division Semiring as Division Semiring
+Informal statement: For any commutative division semiring \( \alpha \), it is also a division semiring. This instance asserts that a commutative division semiring, which is a commutative semiring with multiplicative inverses for nonzero elements, inherits the properties of a division semiring, ensuring that every nonzero element has a multiplicative inverse.
+**Neighbor statements:**
+1.
+Formal name: div_sub'
+Formal statement: ∀ {K : Type u_3} [inst : Field K] (a b c : K), c ≠ 0 → a / c - b = (a - c * b) / c
+Informal name: Subtraction of Quotient and Element in Fields
+Informal statement: For any field $K$ and elements $a$, $b$, and $c$ in $K$, if $c$ is nonzero, then the difference between the quotient $a$ divided by $c$ and $b$ is equal to the quotient of the difference between $a$ and the product of $c$ and $b$, all divided by $c$.
+2.
+Formal name: RingHom.injective
+Formal statement: ∀ {α : Type u_1} {β : Type u_2} [inst : DivisionRing α] [inst_1 : Semiring β] [inst_2 : Nontrivial β] (f : α →+* β),
+  Injective ⇑f
+Informal name: Injective Ring Homomorphism in Division Rings and Semirings
+Informal statement: For any division ring $\alpha$, semiring $\beta$ with a nontrivial structure, and ring homomorphism $f : \alpha \rightarrow \beta$, the function $f$ is injective. This means that for any two elements $a_1, a_2 \in \alpha$, if $f(a_1) = f(a_2)$, then $a_1 = a_2$. In other words, $f$ maps distinct elements of $\alpha$ to distinct elements of $\beta$.
+**Similar translation examples:**
+1.
+Formal name: Fintype.fieldOfDomain
+Formal statement: (R : Type u_3) → [inst : CommRing R] → [inst : IsDomain R] → [inst : DecidableEq R] → [inst : Fintype R] → Field R
+Informal name: Finite Commutative Integral Domain is a Field
+Informal statement: Every finite commutative domain is a field. More generally, commutativity is not required: this can be found in `Mathlib.RingTheory.LittleWedderburn`.
+2.
+Formal name: Finite.isDomain_to_isField
+Formal statement: ∀ (D : Type u_1) [inst : Finite D] [inst : Ring D] [inst_1 : IsDomain D], IsField D
+Informal name: Finite Rings as Fields from Integral Domains
+Informal statement: A finite domain is a field.
+3.
+Formal name: IsFractionRing.isDomain
+Formal statement: ∀ (A : Type u_4) [inst : CommRing A] [inst_1 : IsDomain A] {K : Type u_5} [inst_2 : CommRing K] [inst_3 : Algebra A K]
+  [inst : IsFractionRing A K], IsDomain K
+Informal name: Preservation of Domain Property in Localization of Commutative Rings
+Informal statement: A `CommRing` `K` which is the localization of an integral domain `R` at `R - {0}` is an integral domain.
+
+**Formal name:**
+Field.isDomain
+**Formal statement:**
+∀ {K : Type u_3} [inst : Field K], IsDomain K
+
+### Output 1:
+
+**Informal statement**
+For any field $K$, $K$ is also a domain.
+**Informal name**
+Fields are Domains
+
+### Input 2:
+
+**Head statements:**
+
+# Topology on the rational numbers
+
+The structure of a metric space on `ℚ` is introduced in this file, induced from `ℝ`.
+
+**Kind:**
+instance
+**Docstring:**
+
+**Dependent statements:**
+1.
+Formal name: MetricSpace
+Formal statement: Type u → Type u
+Informal name: Metric space
+Informal statement: A `MetricSpace` is a type `α` equipped with a distance function `dist : α → α → ℝ` that satisfies the properties of a pseudometric space, with the additional requirement that `dist x y = 0` implies `x = y`. This structure extends the `PseudoMetricSpace` structure, which only requires the distance function to satisfy the triangle inequality, symmetry, and non-negativity.
+2.
+Formal name: Rat
+Formal statement: Type
+Informal name: Rational Numbers
+Informal statement: The structure `Rat` represents the set of rational numbers, which are defined as the quotient of two integers `num / den`, where the denominator `den` is positive and the numerator `num` and denominator `den` are coprime.
+**Neighbor statements:**
+1.
+Formal name: Rat.dist_eq
+Formal statement: ∀ (x y : ℚ), dist x y = |↑x - ↑y|
+Informal name: Distance Formula for Rational Numbers Induced by Real Numbers
+Informal statement: For any two rational numbers \( x \) and \( y \), the distance between them in the metric space of rational numbers, denoted as \( dist(x, y) \), is equal to the absolute difference between their real number representations, denoted as \( |\text{cast}(x) - \text{cast}(y)| \). This theorem establishes the explicit formula for the distance function on the rational numbers induced from the real numbers, where the cast operation `↑` maps a rational number to its equivalent real number.
+**Similar translation examples:**
+
+**Formal name:**
+Rat.instMetricSpaceRat
+**Formal statement:**
+MetricSpace ℚ
+
+### Output 2:
+
+**Informal statement**
+The rational numbers $\mathbb{Q}$ is equipped with a canonical metric space structure, which is induced from the metric space structure of the real numbers.
+**Informal name**
+The Metric Space Structure on Rational Numbers
+
+### Now, your input is:
+
+{{ format_input(input) }}

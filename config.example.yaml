@@ -1,0 +1,50 @@
+# Example config.local.yaml. Copy to config.local.yaml and edit; the local
+# file overrides config.yaml (which holds repo-wide defaults). Both are read
+# by src/leansearchv2/config.py.
+
+# Point the retriever at the public service instead of localhost:
+# retriever:
+#   url: https://leansearch.net
+
+# Add the two LLM profiles used by the paper. Each entry under `llm.*` is
+# a named OpenAI-compatible profile that any role can pick up by name.
+# Keys are read from env vars by default; inline `api_key:` also works but
+# is discouraged for committed configs.
+# llm:
+#   sonnet:
+#     base_url: https://api.your-vendor.example/v1
+#     api_key_env: SONNET_API_KEY
+#     model: claude-sonnet-4-5-20250929
+#     max_tokens: 32768
+#   kimi:
+#     base_url: https://api.your-vendor.example/v1
+#     api_key_env: KIMI_API_KEY
+#     model: moonshotai/Kimi-K2-Instruct
+
+# Route reasoning-mode roles to the profiles defined above:
+# reasoning:
+#   sketch_llm: sonnet
+#   filter_llm: kimi
+#   judge_llm: sonnet
+#   parallelism: 16              # bump if the retriever endpoint can keep up
+
+# Route prove-task roles likewise:
+# prove:
+#   prover_llm: sonnet
+#   query_llm: sonnet
+#   parallelism: 32
+#   reflection_rounds: 8
+
+# Tunables for the dependency-aware informalizer (corpus build step 1c).
+# All fields are optional; the defaults below match the values used to
+# generate the released HuggingFace JSONL.
+# informalize:
+#   llm: sonnet                  # named profile under `llm.*`
+#   parallelism: 16              # concurrent LLM requests per level
+#   max_input_tokens: 200000     # budget the prompt is shrunk to fit
+#   max_output_tokens: 16000
+#   max_signature_tokens: 3500
+#   max_value_tokens: 6000
+#   max_docstring_tokens: 800
+#   max_dependency_items: 96     # cap on dependencies injected per prompt
+#   max_dependency_item_tokens: 400
