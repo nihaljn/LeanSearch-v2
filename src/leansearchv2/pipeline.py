@@ -1,7 +1,14 @@
 """LeanSearch v2 standard-mode retrieval pipeline.
 
-Qwen3-Embedding-8B for query encoding, cuVS CAGRA for vector search, and
-Qwen3-Reranker-8B (HuggingFace, one replica per GPU) for cross-encoder rerank.
+Qwen3-Embedding-4B for query encoding, an exact GPU brute-force matmul for
+vector search (the corpus fits comfortably in VRAM, so no approximate index
+is needed), and Qwen3-Reranker-4B (HuggingFace, one replica per GPU) for
+cross-encoder rerank.
+
+The original release used cuVS CAGRA, but cuVS/RAPIDS requires compute
+capability >= 7.0 and so cannot run on Pascal (e.g. GTX 1080 Ti). A
+normalized inner-product matmul + top-k over the corpus matrix is exact and
+runs in ~20 ms on these cards.
 """
 
 from __future__ import annotations
@@ -11,10 +18,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import cupy as cp
 import numpy as np
 import torch
-from cuvs.neighbors import cagra
 from sentence_transformers import SentenceTransformer
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -70,34 +75,53 @@ class RetrievalPipeline:
             raise RuntimeError("No GPU available. This pipeline requires GPU.")
 
         self.embedding_device = "cuda:0"
-        self._load_cuvs_index()
+        # Corpus matrix lives on the embedding device so the query/corpus
+        # matmul is local (no cross-device copy). ~1.4 GiB for the full
+        # Mathlib corpus in fp16, on top of the embedder's ~7.7 GiB.
+        self.search_device = self.embedding_device
+        self._load_embeddings()
         self.reranker_devices = [f"cuda:{i}" for i in range(1, self.num_gpus)]
 
         print(f"\n{'=' * 60}")
         print(f"GPU Allocation:")
         print(f"  Available: {total_gpus}, Using: {self.num_gpus}")
         print(f"  Embedding: {self.embedding_device}")
-        print(f"  Vector index: cuvs")
+        print(f"  Vector index: GPU brute-force matmul (exact, on {self.search_device})")
         print(f"  Reranker: HuggingFace Qwen3-Reranker (yes/no 2-way log_softmax)")
         print(f"  Reranker devices: {self.reranker_devices}")
         print(f"{'=' * 60}\n")
 
         self._load_models()
 
-    def _load_cuvs_index(self) -> None:
-        cuvs_index_path = self.vectordb_dir / "cuvs_index.bin"
-        if not cuvs_index_path.exists():
-            raise RuntimeError(f"cuVS index not found at {cuvs_index_path}")
+    def _load_embeddings(self) -> None:
+        """Load the normalized corpus embedding matrix onto ``search_device``.
 
-        print(f"Loading cuVS CAGRA index from {cuvs_index_path}...")
-        self.cuvs_index = cagra.load(str(cuvs_index_path))
-        # itopk_size must satisfy ceildiv(itopk_size, 32) * 32 >= topk in
-        # multi-cta search mode. itopk=1024 with search_width=4 keeps
-        # recall@200 close to 1.0 at negligible latency on H200.
-        self.cuvs_search_params = cagra.SearchParams(
-            itopk_size=1024, search_width=4, max_iterations=64
+        Expects ``<vectordb_dir>/embeddings.npy`` of shape (N, dim) produced
+        by ``leansearchv2.corpus.build_embeddings`` with the same embedder as
+        ``models.embedder``. Vectors are assumed already L2-normalized; we
+        re-normalize defensively and keep them in fp16 to halve VRAM.
+        """
+        emb_path = self.vectordb_dir / "embeddings.npy"
+        if not emb_path.exists():
+            raise RuntimeError(
+                f"Corpus embeddings not found at {emb_path}. "
+                f"Build them with `python -m leansearchv2.corpus.build_embeddings`."
+            )
+
+        print(f"Loading corpus embeddings from {emb_path}...")
+        emb = np.load(emb_path)
+        if emb.shape[0] != len(self.data):
+            raise RuntimeError(
+                f"embeddings.npy has {emb.shape[0]} rows but metadata has "
+                f"{len(self.data)} records; rebuild the index."
+            )
+        t = torch.from_numpy(np.ascontiguousarray(emb)).to(
+            self.search_device, dtype=torch.float16
         )
-        print("cuVS index loaded successfully")
+        t = torch.nn.functional.normalize(t, dim=1)
+        self.corpus_emb = t  # (N, dim) fp16 on search_device
+        gib = t.element_size() * t.nelement() / (1024**3)
+        print(f"Corpus matrix: {tuple(t.shape)} fp16 on {self.search_device} ({gib:.2f} GiB)")
 
     def _get_gpu_free_memory(self, gpu_idx: int) -> tuple[float, float]:
         free, total = torch.cuda.mem_get_info(gpu_idx)
@@ -161,12 +185,21 @@ class RetrievalPipeline:
         print(f"All {len(self.reranker_models)} reranker replica(s) ready")
         print(f"{'=' * 60}")
 
-    def _search_cuvs(self, query_embedding: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
-        query_gpu = cp.asarray(query_embedding, dtype=cp.float32)
-        distances, indices = cagra.search(
-            self.cuvs_search_params, self.cuvs_index, query_gpu, k
+    def _search_vectors(self, query_embedding: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
+        """Exact top-k inner-product search via a brute-force GPU matmul.
+
+        ``query_embedding`` is (1, dim) and L2-normalized; the corpus matrix
+        is normalized too, so inner product == cosine similarity. Returns
+        (scores, indices), both (1, k), ordered by descending similarity.
+        """
+        q = torch.from_numpy(np.ascontiguousarray(query_embedding)).to(
+            self.search_device, dtype=self.corpus_emb.dtype
         )
-        return cp.asnumpy(distances), cp.asnumpy(indices)
+        with torch.no_grad():
+            scores = q @ self.corpus_emb.T  # (1, N)
+            k = min(k, self.corpus_emb.shape[0])
+            vals, idx = torch.topk(scores, k, dim=1)
+        return vals.float().cpu().numpy(), idx.cpu().numpy()
 
     def _format_pair(self, query: str, doc: str) -> str:
         return f"<Instruct>: {self.INSTRUCTION}\n<Query>: {query}\n<Document>: {doc}"
@@ -253,10 +286,10 @@ class RetrievalPipeline:
             retrieve_k = max(top_k * 2, 50) if rerank else top_k
 
         t0 = time.time()
-        distances, indices = self._search_cuvs(emb, retrieve_k)
+        distances, indices = self._search_vectors(emb, retrieve_k)
         candidates = [(int(i), float(d)) for i, d in zip(indices[0], distances[0]) if i != -1]
         profile["retrieval_time"] = time.time() - t0
-        profile["retrieval_backend"] = "cuvs"
+        profile["retrieval_backend"] = "torch_bruteforce"
         profile["num_candidates"] = len(candidates)
         profile["reranked"] = bool(rerank)
 

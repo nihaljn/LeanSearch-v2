@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     log.info("Starting...")
     num_gpus = get("NUM_GPUS", "serve", "num_gpus")
     app.pipeline = RetrievalPipeline(
-        vectordb_dir=get_path("VECTORDB_DIR", "paths", "cuvs_db"),
+        vectordb_dir=get_path("VECTORDB_DIR", "paths", "index_db"),
         embedding_model_path=get_path("EMBEDDING_MODEL_PATH", "models", "embedder"),
         reranker_model_path=get_path("RERANKER_MODEL_PATH", "models", "reranker"),
         num_gpus=int(num_gpus) if num_gpus is not None else None,
